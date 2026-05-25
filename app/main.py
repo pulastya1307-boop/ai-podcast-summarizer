@@ -4,6 +4,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Literal
 from urllib.parse import parse_qs, urlparse
+import html
+import urllib.request
+import xml.etree.ElementTree as ET
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
@@ -60,20 +63,56 @@ def extract_video_id(youtube_url: str) -> str:
     return video_id
 
 
+def fetch_transcript_fallback(video_id: str) -> str:
+    """Pull transcript from a public XML proxy if youtube-transcript-api is blocked."""
+    url = f"https://youtubetranscript.com/server?v={video_id}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as response:
+            xml_data = response.read().decode('utf-8')
+        
+        if not xml_data or "invalid video id" in xml_data.lower():
+            raise RuntimeError("Fallback returned empty or invalid video ID response.")
+            
+        root = ET.fromstring(xml_data)
+        text_list = []
+        for text_elem in root.findall('text'):
+            text_list.append(html.unescape(text_elem.text or ""))
+            
+        transcript_text = " ".join(text_list).strip()
+        if not transcript_text:
+            raise RuntimeError("Parsed fallback transcript was empty.")
+            
+        return transcript_text
+    except Exception as error:
+        raise RuntimeError(f"Fallback proxy fetch failed: {str(error)}") from error
+
+
 def get_transcript(video_id: str) -> str:
-    """Fetch an English YouTube transcript and combine its caption snippets."""
+    """Fetch an English YouTube transcript and combine its caption snippets, with proxy fallback."""
+    primary_error = None
     try:
         fetched_transcript = YouTubeTranscriptApi().fetch(video_id, languages=["en"])
+        transcript_text = " ".join(snippet.text for snippet in fetched_transcript).strip()
+        if transcript_text:
+            return transcript_text
+        primary_error = RuntimeError("Fetched transcript content is empty.")
     except Exception as error:
+        primary_error = error
+
+    # Fallback to public XML scraper proxy to bypass cloud provider IP ban
+    try:
+        return fetch_transcript_fallback(video_id)
+    except Exception as fallback_error:
         raise RuntimeError(
-            f"An English transcript could not be fetched for this video. Details: {type(error).__name__}: {str(error)}"
-        ) from error
+            f"An English transcript could not be fetched for this video.\n"
+            f"- Primary error (API blocked): {type(primary_error).__name__}: {str(primary_error)}\n"
+            f"- Fallback error (Proxy failed): {type(fallback_error).__name__}: {str(fallback_error)}"
+        ) from primary_error
 
-    transcript_text = " ".join(snippet.text for snippet in fetched_transcript).strip()
-    if not transcript_text:
-        raise RuntimeError("The transcript is empty.")
-
-    return transcript_text
 
 
 def summarize_transcript(
