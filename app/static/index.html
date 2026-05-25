@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Podcast Summarizer</title>
+    <style>
+      :root {
+        --background: #f5f5f1;
+        --card: #fffdf8;
+        --card-muted: #f1efe7;
+        --text: #1f2926;
+        --muted: #66736e;
+        --border: #ddd9cd;
+        --accent: #156b58;
+        --accent-dark: #0c5142;
+        --accent-soft: #dcece5;
+        --success: #156b58;
+        --error: #a1372b;
+        --error-soft: #f8e8e5;
+        --shadow: 0 18px 46px rgba(31, 41, 38, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 80% 0%, #e0ede5 0%, transparent 38%),
+          var(--background);
+        color: var(--text);
+        font-family: Arial, sans-serif;
+      }
+
+      .page {
+        width: min(1080px, calc(100% - 36px));
+        margin: 0 auto;
+        padding: 58px 0 46px;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 18px;
+        padding: 8px 13px;
+        border-radius: 100px;
+        background: var(--accent-soft);
+        color: var(--accent-dark);
+        font-size: 13px;
+        font-weight: bold;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+
+      h1 {
+        max-width: 700px;
+        margin: 0 0 14px;
+        font-size: clamp(38px, 6vw, 58px);
+        letter-spacing: -0.06em;
+        line-height: 1.04;
+      }
+
+      .lead {
+        max-width: 650px;
+        margin: 0 0 34px;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.65;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.9fr);
+        gap: 18px;
+        align-items: stretch;
+      }
+
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--card);
+        box-shadow: var(--shadow);
+      }
+
+      .form-card {
+        padding: clamp(24px, 4vw, 34px);
+      }
+
+      .card-title {
+        margin: 0 0 6px;
+        font-size: 23px;
+        letter-spacing: -0.035em;
+      }
+
+      .card-copy {
+        margin: 0 0 25px;
+        color: var(--muted);
+        line-height: 1.55;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 9px;
+        font-size: 14px;
+        font-weight: bold;
+      }
+
+      .form-row {
+        display: flex;
+        gap: 10px;
+      }
+
+      input {
+        flex: 1;
+        min-width: 0;
+        padding: 15px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: white;
+        color: var(--text);
+        font-size: 16px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+
+      input:focus,
+      select:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 4px var(--accent-soft);
+      }
+
+      .options {
+        display: grid;
+        grid-template-columns: minmax(180px, 0.8fr) minmax(0, 1.2fr);
+        gap: 12px;
+        margin-top: 18px;
+      }
+
+      select,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: white;
+        color: var(--text);
+        font: inherit;
+        transition: border-color 0.2s, box-shadow 0.2s;
+      }
+
+      select {
+        padding: 13px 12px;
+      }
+
+      textarea {
+        min-height: 48px;
+        padding: 12px 14px;
+        resize: vertical;
+      }
+
+      .option label {
+        margin-bottom: 8px;
+      }
+
+      button {
+        padding: 15px 22px;
+        border: 0;
+        border-radius: 12px;
+        background: var(--accent);
+        color: white;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: bold;
+        transition: background 0.2s, transform 0.2s;
+      }
+
+      button:hover:not(:disabled) {
+        background: var(--accent-dark);
+      }
+
+      button:active:not(:disabled) {
+        transform: translateY(1px);
+      }
+
+      button:disabled {
+        opacity: 0.68;
+        cursor: wait;
+      }
+
+      .helper {
+        margin: 13px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 22px;
+        padding: 14px 15px;
+        border-radius: 12px;
+        background: var(--card-muted);
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .status[hidden],
+      .result-panel[hidden] {
+        display: none;
+      }
+
+      .status.loading .status-dot {
+        animation: pulse 1s infinite ease-in-out;
+      }
+
+      .status.success {
+        background: var(--accent-soft);
+        color: var(--success);
+      }
+
+      .status.error {
+        background: var(--error-soft);
+        color: var(--error);
+      }
+
+      .status-dot {
+        flex-shrink: 0;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      @keyframes pulse {
+        50% {
+          opacity: 0.25;
+          transform: scale(0.8);
+        }
+      }
+
+      .guide {
+        padding: 25px;
+        background: var(--card-muted);
+        box-shadow: none;
+      }
+
+      .guide h2 {
+        margin: 0 0 20px;
+        font-size: 18px;
+      }
+
+      .step {
+        display: flex;
+        gap: 13px;
+        margin-bottom: 20px;
+      }
+
+      .step:last-child {
+        margin-bottom: 0;
+      }
+
+      .step-number {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: white;
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: bold;
+        line-height: 28px;
+        text-align: center;
+      }
+
+      .step strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
+
+      .step p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .result-panel {
+        margin-top: 20px;
+        padding: clamp(22px, 4vw, 34px);
+      }
+
+      .result-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: start;
+        margin-bottom: 24px;
+      }
+
+      .result-header h2 {
+        margin: 0 0 5px;
+        font-size: 25px;
+        letter-spacing: -0.04em;
+      }
+
+      #saved-file {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .report {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .report-section {
+        padding: 19px;
+        border-radius: 14px;
+        background: var(--card-muted);
+      }
+
+      .report-section:first-child {
+        grid-column: 1 / -1;
+        background: var(--accent-soft);
+      }
+
+      .report-section h3 {
+        margin: 0 0 11px;
+        color: var(--accent-dark);
+        font-size: 16px;
+      }
+
+      .report-section p,
+      .report-section li {
+        margin: 0 0 8px;
+        color: #35443e;
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .report-section p:last-child,
+      .report-section li:last-child {
+        margin-bottom: 0;
+      }
+
+      .report-section ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          padding-top: 34px;
+        }
+
+        .workspace,
+        .report {
+          grid-template-columns: 1fr;
+        }
+
+        .form-row {
+          flex-direction: column;
+        }
+
+        .options {
+          grid-template-columns: 1fr;
+        }
+
+        button {
+          width: 100%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <header>
+        <p class="eyebrow"><span class="dot"></span>AI-powered notes</p>
+        <h1>Turn podcast episodes into useful ideas.</h1>
+        <p class="lead">
+          Paste a YouTube link and get a clear summary, key insights, startup
+          ideas, and actionable lessons in one report.
+        </p>
+      </header>
+
+      <section class="workspace">
+        <div class="card form-card">
+          <h2 class="card-title">Summarize an episode</h2>
+          <p class="card-copy">
+            Works with public YouTube videos that have English captions.
+          </p>
+
+          <form id="summary-form">
+            <label for="youtube-url">YouTube URL</label>
+            <div class="form-row">
+              <input
+                id="youtube-url"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                autocomplete="url"
+                required
+              />
+              <button id="submit-button" type="submit">Summarize</button>
+            </div>
+            <div class="options">
+              <div class="option">
+                <label for="report-mode">Report style</label>
+                <select id="report-mode">
+                  <option value="quick">Quick scan - lowest cost</option>
+                  <option value="deep">Deep analysis - more detail</option>
+                </select>
+              </div>
+              <div class="option">
+                <label for="focus">What do you care about? (optional)</label>
+                <textarea
+                  id="focus"
+                  placeholder="Example: What business opportunities seem realistic?"
+                ></textarea>
+              </div>
+            </div>
+          </form>
+          <p class="helper">
+            Quick scan uses fewer credits. Deep analysis trades extra cost for
+            a fuller report. Each result is saved as a text file.
+          </p>
+
+          <div id="status" class="status" aria-live="polite" hidden>
+            <span class="status-dot"></span>
+            <span id="status-message"></span>
+          </div>
+        </div>
+
+        <aside class="card guide">
+          <h2>How it works</h2>
+          <div class="step">
+            <span class="step-number">1</span>
+            <div>
+              <strong>Paste a link</strong>
+              <p>Enter a YouTube podcast URL above.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-number">2</span>
+            <div>
+              <strong>Read captions</strong>
+              <p>The app retrieves the available transcript.</p>
+            </div>
+          </div>
+          <div class="step">
+            <span class="step-number">3</span>
+            <div>
+              <strong>Get a report</strong>
+              <p>Choose a quick scan or a deeper, evidence-aware analysis.</p>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section id="result-panel" class="card result-panel" hidden>
+        <div class="result-header">
+          <div>
+            <h2>Your report</h2>
+            <p id="saved-file"></p>
+          </div>
+        </div>
+        <div id="result" class="report"></div>
+      </section>
+    </main>
+
+    <script>
+      const form = document.getElementById("summary-form");
+      const urlInput = document.getElementById("youtube-url");
+      const modeSelect = document.getElementById("report-mode");
+      const focusInput = document.getElementById("focus");
+      const button = document.getElementById("submit-button");
+      const status = document.getElementById("status");
+      const statusMessage = document.getElementById("status-message");
+      const resultPanel = document.getElementById("result-panel");
+      const result = document.getElementById("result");
+      const savedFile = document.getElementById("saved-file");
+
+      function setStatus(message, type) {
+        status.hidden = false;
+        status.className = `status ${type}`;
+        statusMessage.textContent = message;
+      }
+
+      function renderAnalysis(analysis) {
+        result.replaceChildren();
+        let section = null;
+        let list = null;
+
+        analysis.split("\n").forEach((line) => {
+          const trimmedLine = line.trim();
+          if (!trimmedLine) {
+            return;
+          }
+
+          if (trimmedLine.startsWith("# ")) {
+            section = document.createElement("article");
+            section.className = "report-section";
+            const heading = document.createElement("h3");
+            heading.textContent = trimmedLine.slice(2);
+            section.appendChild(heading);
+            result.appendChild(section);
+            list = null;
+          } else if (trimmedLine.startsWith("- ") && section) {
+            if (!list) {
+              list = document.createElement("ul");
+              section.appendChild(list);
+            }
+            const item = document.createElement("li");
+            item.textContent = trimmedLine.slice(2);
+            list.appendChild(item);
+          } else if (section) {
+            const paragraph = document.createElement("p");
+            paragraph.textContent = trimmedLine;
+            section.appendChild(paragraph);
+          }
+        });
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        button.disabled = true;
+        button.textContent = "Working...";
+        resultPanel.hidden = true;
+        setStatus("Fetching the transcript and preparing your report...", "loading");
+
+        try {
+          const response = await fetch("/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              youtube_url: urlInput.value,
+              report_mode: modeSelect.value,
+              focus: focusInput.value,
+            }),
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.detail || "Something went wrong.");
+          }
+
+          renderAnalysis(data.analysis);
+          const modeName = data.report_mode === "deep" ? "Deep analysis" : "Quick scan";
+          savedFile.textContent = `${modeName} using ${data.model} | Saved to ${data.saved_to}`;
+          resultPanel.hidden = false;
+          setStatus("Your podcast report is ready.", "success");
+        } catch (error) {
+          setStatus(error.message, "error");
+        } finally {
+          button.disabled = false;
+          button.textContent = "Summarize";
+        }
+      });
+    </script>
+  </body>
+</html>

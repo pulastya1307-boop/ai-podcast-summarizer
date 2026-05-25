@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: ai-podcast-summarizer
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_QUICK_MODEL
+        value: gpt-5-nano
+      - key: OPENAI_DEEP_MODEL
+        value: gpt-5.4-mini
