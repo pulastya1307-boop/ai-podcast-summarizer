@@ -66,7 +66,7 @@ def get_transcript(video_id: str) -> str:
         fetched_transcript = YouTubeTranscriptApi().fetch(video_id, languages=["en"])
     except Exception as error:
         raise RuntimeError(
-            "An English transcript could not be fetched for this video."
+            f"An English transcript could not be fetched for this video. Details: {type(error).__name__}: {str(error)}"
         ) from error
 
     transcript_text = " ".join(snippet.text for snippet in fetched_transcript).strip()
