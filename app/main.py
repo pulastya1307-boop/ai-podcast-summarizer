@@ -22,8 +22,8 @@ app = FastAPI(
 
 OUTPUT_FOLDER = Path("outputs")
 HOME_PAGE = Path(__file__).parent / "static" / "index.html"
-QUICK_MODEL = "gpt-5-nano"
-DEEP_MODEL = "gpt-5.4-mini"
+QUICK_MODEL = "gpt-4o-mini"
+DEEP_MODEL = "o3-mini"
 
 
 class SummaryRequest(BaseModel):
@@ -138,14 +138,20 @@ TRANSCRIPT:
 {transcript}
 """
 
+    kwargs = {
+        "model": model,
+        "input": prompt,
+        "max_output_tokens": max_output_tokens,
+    }
+
+    # Only pass reasoning/verbosity parameters to models known to support them (like o1, o3, o4, etc.)
+    is_reasoning_model = any(prefix in model.lower() for prefix in ["o1", "o3", "o4", "gpt-5"])
+    if is_reasoning_model:
+        kwargs["reasoning"] = reasoning
+        kwargs["text"] = {"verbosity": verbosity}
+
     try:
-        response = client.responses.create(
-            model=model,
-            input=prompt,
-            reasoning=reasoning,
-            text={"verbosity": verbosity},
-            max_output_tokens=max_output_tokens,
-        )
+        response = client.responses.create(**kwargs)
     except OpenAIError as error:
         raise RuntimeError(f"OpenAI could not create a summary: {error}") from error
 

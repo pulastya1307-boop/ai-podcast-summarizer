@@ -61,8 +61,8 @@ In `.env`, replace only the placeholder with a real API key:
 
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
-OPENAI_QUICK_MODEL=gpt-5-nano
-OPENAI_DEEP_MODEL=gpt-5.4-mini
+OPENAI_QUICK_MODEL=gpt-4o-mini
+OPENAI_DEEP_MODEL=o3-mini
 ```
 
 Keep `.env` private. Never place a real API key in `README.md`, source code,
@@ -129,8 +129,8 @@ The app offers two simple modes:
 
 | Mode | Default model | Use it for |
 | --- | --- | --- |
-| Quick scan | `gpt-5-nano` | Fast, low-credit summaries and first looks. |
-| Deep analysis | `gpt-5.4-mini` | Better synthesis when a video is worth studying. |
+| Quick scan | `gpt-4o-mini` | Fast, low-credit summaries and first looks. |
+| Deep analysis | `o3-mini` | Better synthesis when a video is worth studying. |
 
 Quick reports use minimal reasoning, low verbosity, and a 1000-token output
 limit. Deep reports use more room for stronger synthesis. Longer video
@@ -206,8 +206,8 @@ Environment variables:
 | Variable | Value |
 | --- | --- |
 | `OPENAI_API_KEY` | Add securely in Render; never commit it. |
-| `OPENAI_QUICK_MODEL` | `gpt-5-nano` |
-| `OPENAI_DEEP_MODEL` | `gpt-5.4-mini` |
+| `OPENAI_QUICK_MODEL` | `gpt-4o-mini` |
+| `OPENAI_DEEP_MODEL` | `o3-mini` |
 
 ### 3. Open And Test The Public App
 
@@ -245,7 +245,7 @@ It should display:
 ## Documentation
 
 - [OpenAI Responses API text generation](https://developers.openai.com/api/docs/guides/text)
-- [OpenAI GPT-5 nano model](https://developers.openai.com/api/docs/models/gpt-5-nano)
+- [OpenAI Models Guide](https://platform.openai.com/docs/models)
 - [youtube-transcript-api](https://github.com/jdepoix/youtube-transcript-api)
 - [Render FastAPI deployment guide](https://render.com/docs/deploy-fastapi)
 - [Render free tier limitations](https://render.com/free)
